@@ -5,7 +5,6 @@
 module Huffman (Tree (..)) where
 
 import Data.List (group, sort, sortBy)
-import Debug.Trace
 
 -- | Huffman coding tree.
 data Tree a where
@@ -47,16 +46,13 @@ buildTree input =
 
       loop :: [Tree (Frequency Char)] -> Tree (Frequency Char)
       loop [] = error "failed"
-      loop [last] = last
+      loop [final] = final
       loop next =
-        let
-          -- Choose two trees with the smallest weights;
-          sorted = sortBy (\a b -> compare (sumCount a) (sumCount b)) next
-          -- call these trees T1 and T2.
-          [t1, t2] = take 2 sorted
-        -- Create a new tree whose...left sub-tree is T1 and whose right
-        -- sub-tree is T2.
-        in loop $ (Branch t1 t2) : drop 2 sorted
+        let sorted = sortBy (\a b -> compare (sumCount a) (sumCount b)) next
+            pair = take 2 sorted
+         in case pair of
+              [t1, t2] -> loop $ (Branch t1 t2) : drop 2 sorted
+              _ -> error "failed"
    in loop initialTrees
 
 main :: IO ()
