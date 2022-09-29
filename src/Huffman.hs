@@ -26,14 +26,6 @@ sumCount :: Tree (Frequency a) -> Int
 sumCount (Leaf a) = count a
 sumCount (Branch a b) = sumCount a + sumCount b
 
--- | Combine trees by comparing their summed character frequencies.
-instance Semigroup (Tree (Frequency a)) where
-  a <> b
-    | sumCount a == sumCount b = Branch a b
-    | sumCount a > sumCount b = Branch b a
-    | sumCount a < sumCount b = Branch a b
-    | otherwise = error "failed"
-
 -- | Calculate frequency of letters.
 frequencies :: String -> [Frequency Char]
 frequencies = map (\c -> Frequency {char = head c, count = length c}) . group . sort
