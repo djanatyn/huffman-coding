@@ -3,10 +3,21 @@
 --
 -- - <https://engineering.purdue.edu/ece264/17au/hw/HW13?alt=huffman>
 module Huffman
-  ( Tree (..),
+  ( -- Types
+    Tree (..),
+    Frequency (..),
+    Dictionary (..),
+
+    -- Creating Trees
+    frequencies,
     buildTree,
+
+    -- Interpreting Trees
     coding,
-    splitBytes,
+    translate,
+
+    -- Serializing
+    splitBytes
   )
 where
 
@@ -27,6 +38,9 @@ data Frequency a where
 data Dictionary a where
   Dictionary :: [(a, String)] -> Dictionary a
   deriving (Show)
+
+instance Semigroup (Dictionary a) where
+  Dictionary a <> Dictionary b = Dictionary (a <> b)
 
 -- | Sort frequencies by their count.
 instance Eq a => Ord (Frequency a) where
@@ -58,15 +72,17 @@ buildTree input =
               _ -> error "failed"
    in loop initialTrees
 
-coding :: Tree (Frequency Char) -> [(Char, String)]
+coding :: Tree (Frequency Char) -> Dictionary Char
 coding input =
-  let loop :: Maybe String -> Tree (Frequency Char) -> [(Char, String)]
+  let loop :: Maybe String -> Tree (Frequency Char) -> Dictionary Char
       loop Nothing start = case start of
         (Leaf _) -> error "only one character"
-        (Branch left right) -> loop (Just "0") left ++ loop (Just "1") right
+        (Branch left right) ->
+          loop (Just "0") left <> loop (Just "1") right
       loop (Just path) next = case next of
-        (Leaf end) -> [(char end, path)]
-        (Branch left right) -> loop (Just $ path ++ "0") left ++ loop (Just $ path ++ "1") right
+        (Leaf end) -> Dictionary [(char end, path)]
+        (Branch left right) ->
+          loop (Just $ path ++ "0") left <> loop (Just $ path ++ "1") right
    in loop Nothing input
 
 grabByte :: String -> Maybe (String, String)
@@ -76,8 +92,8 @@ grabByte bytes =
    in if null byte then Nothing else Just (byte, rest)
 
 -- | Translate to binary string using Huffman coding.
-translate :: [(Char, String)] -> String -> String
-translate dict input =
+translate :: Dictionary Char -> String -> String
+translate (Dictionary dict) input =
   let get :: Char -> String
       get c = fromMaybe (error "failed") $ lookup c dict
    in foldl1 (++) $ map get input
