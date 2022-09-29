@@ -2,20 +2,31 @@
 -- Haskell implementation of huffman coding lossless compression.
 --
 -- - <https://engineering.purdue.edu/ece264/17au/hw/HW13?alt=huffman>
-module Huffman (Tree (..)) where
+module Huffman
+  ( Tree (..),
+    buildTree,
+    coding,
+    splitBytes,
+  )
+where
 
-import Data.List (group, sort, sortBy)
+import Data.List (group, sort, sortBy, unfoldr)
+import Data.Maybe (fromMaybe)
 
 -- | Huffman coding tree.
 data Tree a where
   Leaf :: a -> Tree a
-  Branch :: (Tree a) -> (Tree a) -> Tree a
+  Branch :: Tree a -> Tree a -> Tree a
   deriving (Show)
 
 -- | Frequency of letter occurence in a string.
 data Frequency a where
   Frequency :: {char :: a, count :: Int} -> Frequency a
   deriving (Show, Eq)
+
+data Dictionary a where
+  Dictionary :: [(a, String)] -> Dictionary a
+  deriving (Show)
 
 -- | Sort frequencies by their count.
 instance Eq a => Ord (Frequency a) where
@@ -43,20 +54,42 @@ buildTree input =
         let sorted = sortBy (\a b -> compare (sumCount a) (sumCount b)) next
             pair = take 2 sorted
          in case pair of
-              [t1, t2] -> loop $ (Branch t1 t2) : drop 2 sorted
+              [t1, t2] -> loop $ Branch t1 t2 : drop 2 sorted
               _ -> error "failed"
    in loop initialTrees
-
-main :: IO ()
-main = print $ buildTree "go go gophers"
 
 coding :: Tree (Frequency Char) -> [(Char, String)]
 coding input =
   let loop :: Maybe String -> Tree (Frequency Char) -> [(Char, String)]
       loop Nothing start = case start of
-        (Leaf end) -> error "only one character"
+        (Leaf _) -> error "only one character"
         (Branch left right) -> loop (Just "0") left ++ loop (Just "1") right
       loop (Just path) next = case next of
         (Leaf end) -> [(char end, path)]
         (Branch left right) -> loop (Just $ path ++ "0") left ++ loop (Just $ path ++ "1") right
    in loop Nothing input
+
+grabByte :: String -> Maybe (String, String)
+grabByte bytes =
+  let byte = take 8 bytes
+      rest = drop 8 bytes
+   in if null byte then Nothing else Just (byte, rest)
+
+-- | Translate to binary string using Huffman coding.
+translate :: [(Char, String)] -> String -> String
+translate dict input =
+  let get :: Char -> String
+      get c = fromMaybe (error "failed") $ lookup c dict
+   in foldl1 (++) $ map get input
+
+splitBytes :: String -> [String]
+splitBytes = unfoldr grabByte
+
+main :: IO ()
+main =
+  let input = "recurse center"
+      tree = buildTree input
+      dict = coding tree
+      translation = translate dict input
+      bytes = splitBytes translation
+   in mapM_ putStrLn [input, show tree, show dict, show translation, show bytes]
