@@ -57,3 +57,14 @@ buildTree input =
 
 main :: IO ()
 main = print $ buildTree "go go gophers"
+
+coding :: Tree (Frequency Char) -> [(Char, String)]
+coding input =
+  let loop :: Maybe String -> Tree (Frequency Char) -> [(Char, String)]
+      loop Nothing start = case start of
+        (Leaf end) -> error "only one character"
+        (Branch left right) -> loop (Just "0") left ++ loop (Just "1") right
+      loop (Just path) next = case next of
+        (Leaf end) -> [(char end, path)]
+        (Branch left right) -> loop (Just $ path ++ "0") left ++ loop (Just $ path ++ "1") right
+   in loop Nothing input
